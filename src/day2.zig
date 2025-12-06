@@ -1,5 +1,6 @@
 const std = @import("std");
 
+// checks if input is made of two identical substrings
 fn validateId(input: []const u8) bool {
     if (input.len % 2 != 0) {
         return true;
@@ -9,6 +10,39 @@ fn validateId(input: []const u8) bool {
     const right = input[half_len..];
 
     return !std.mem.eql(u8, left, right);
+}
+
+// checks if input is made of multiple identical substrings
+fn validateIdV2(input: []const u8) bool {
+    if (input.len < 2) {
+        return true;
+    }
+
+    const max_substr_len = input.len / 2;
+
+    for (1..max_substr_len + 1) |substr_len| {
+        if (input.len % substr_len != 0) {
+            continue;
+        }
+
+        const pattern = input[0..substr_len];
+        const substr_count = input.len / substr_len;
+
+        var all_match = true;
+        for (1..substr_count) |n| {
+            const index = n * substr_len;
+            const substr = input[index..index + substr_len];
+
+            if (!std.mem.eql(u8, substr, pattern)) {
+                all_match = false;
+                break;
+            }
+        }
+        if (all_match) {
+            return false;
+        }
+    }
+    return true;
 }
 
 fn strip(s: []const u8) []const u8 {
@@ -27,6 +61,7 @@ fn strip(s: []const u8) []const u8 {
 pub fn solve(input: []const u8) !void {
     var iter = std.mem.tokenizeScalar(u8, input, ',');
     var counter: usize = 0;
+    var counter_v2: usize = 0;
 
     while (iter.next()) |id_range| {
         var split = std.mem.splitScalar(u8, id_range, '-');
@@ -44,7 +79,11 @@ pub fn solve(input: []const u8) !void {
             if (validateId(id_str) == false) {
                 counter += id;
             }
+            if (validateIdV2(id_str) == false) {
+                counter_v2 += id;
+            }
         }
     }
-    std.debug.print("Sum of invalid IDs: {}\n", .{counter});
+    std.debug.print("Sum of invalid IDs (part 1): {}\n", .{counter});
+    std.debug.print("Sum of invalid IDs (part 2): {}\n", .{counter_v2});
 }
