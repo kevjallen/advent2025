@@ -33,7 +33,7 @@ fn calculateJoltageV2(bank: []const u8) !usize {
             }
         }
 
-        if (n >= buf[0]) {
+        if (n > buf[0]) {
             buf[0] = n;
         }
     }
