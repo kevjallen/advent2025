@@ -9,8 +9,10 @@ fn calculateJoltage(bank: []const u8) !usize {
 
         if (ones > tens) {
             tens = ones;
-            ones = n;
-        } else if (n > ones) {
+            ones = 1;
+        }
+
+        if (n > ones) {
             ones = n;
         }
     }
