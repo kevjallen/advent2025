@@ -9,11 +9,21 @@ const RollExtractor = struct {
 
     bot_count: usize = 0,
     extract_buf: [1024]u8 = undefined,
+    allocator: std.mem.Allocator = undefined,
 
-    pub fn addRow(self: *RollExtractor, row: []const u8) []const u8 {
+    pub fn init(allocator: std.mem.Allocator) RollExtractor {
+        return RollExtractor{
+            .allocator = allocator,
+        };
+    }
+
+    pub fn addRow(self: *RollExtractor, row: []const u8) ![]const u8 {
+        const copy = try self.allocator.alloc(u8, row.len);
+        @memcpy(copy[0..row.len], row);
+
         self.top = self.mid;
         self.mid = self.bot;
-        self.bot = row;
+        self.bot = copy;
 
         self.count -= self.bot_count;
         self.bot_count = 0;
@@ -67,12 +77,46 @@ const RollExtractor = struct {
 };
 
 pub fn solve(input: []const u8) !void {
-    var extractor = RollExtractor{};
+    var arena_allocator = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena_allocator.deinit();
+
+    const allocator = arena_allocator.allocator();
+
+    var extractors: [1024]RollExtractor = @splat(RollExtractor.init(allocator));
+
     var iter = std.mem.tokenizeScalar(u8, input, '\n');
 
-    while (iter.next()) |row| {
-        _ = extractor.addRow(row);
+    // load input into extractor pipeline
+    while (iter.next()) |line| {
+        const row = try allocator.alloc(u8, line.len);
+        @memcpy(row[0..line.len], line);
+
+        var result = try extractors[0].addRow(row);
+
+        var extractor_idx: usize = 1;
+        while (result.len > 0 and extractor_idx < extractors.len) {
+            result = try extractors[extractor_idx].addRow(result);
+            extractor_idx += 1;
+        }
     }
 
-    std.debug.print("Total rolls: {}\n", .{extractor.count});
+    var roll_count: usize = 0;
+
+    // flush remaining rows through the pipeline
+    var idx: usize = 0;
+    while (idx < extractors.len) : (idx += 1) {
+        var result = try extractors[idx].addRow(&[_]u8{});
+
+        if (extractors[idx].count == 0) break;
+
+        roll_count += extractors[idx].count;
+
+        var propagate_idx: usize = idx + 1;
+        while (result.len > 0 and propagate_idx < extractors.len) {
+            result = try extractors[propagate_idx].addRow(result);
+            propagate_idx += 1;
+        }
+    }
+
+    std.debug.print("Total rolls: {}\n", .{roll_count});
 }
