@@ -8,12 +8,13 @@ const RollExtractor = struct {
     bot: []u8 = &[_]u8{},
 
     bot_count: usize = 0,
-    extract_buf: [1024]u8 = undefined,
+    extract_buf: []u8 = undefined,
     allocator: std.mem.Allocator = undefined,
 
-    pub fn init(allocator: std.mem.Allocator) RollExtractor {
+    pub fn init(allocator: std.mem.Allocator, row_len: usize) !RollExtractor {
         return RollExtractor{
             .allocator = allocator,
+            .extract_buf = try allocator.alloc(u8, row_len),
         };
     }
 
@@ -27,6 +28,7 @@ const RollExtractor = struct {
         if (self.bot.len > 0) {
             self.allocator.free(self.bot);
         }
+        self.allocator.free(self.extract_buf);
     }
 
     pub fn addRow(self: *RollExtractor, row: []const u8) ![]const u8 {
@@ -100,12 +102,17 @@ const RollExtractor = struct {
 pub fn solve(input: []const u8) !void {
     var arena_allocator = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena_allocator.deinit();
+    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    // defer _ = gpa.deinit();
 
     const allocator = arena_allocator.allocator();
+    // const allocator = gpa.allocator();
+
+    const row_len = std.mem.indexOf(u8, input, "\n") orelse input.len;
 
     var extractors: [256]RollExtractor = undefined;
     for (&extractors) |*e| {
-        e.* = RollExtractor.init(allocator);
+        e.* = try RollExtractor.init(allocator, row_len);
     }
     defer for (&extractors) |*e| {
         e.deinit();
