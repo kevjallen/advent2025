@@ -102,11 +102,8 @@ const RollExtractor = struct {
 pub fn solve(input: []const u8) !void {
     var arena_allocator = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena_allocator.deinit();
-    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    // defer _ = gpa.deinit();
 
     const allocator = arena_allocator.allocator();
-    // const allocator = gpa.allocator();
 
     const row_len = std.mem.indexOf(u8, input, "\n") orelse input.len;
 
